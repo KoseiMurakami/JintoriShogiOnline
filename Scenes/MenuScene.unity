@@ -933,6 +933,7 @@ MonoBehaviour:
   BattleButton: {fileID: 287452930}
   PreparationButton: {fileID: 1895313698}
   GachaButton: {fileID: 109419739}
+  evtText: {fileID: 2112761579}
 --- !u!4 &774114887
 Transform:
   m_ObjectHideFlags: 0

@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using UniRx;
 using NCMB;
@@ -52,30 +50,6 @@ public class TitleSceneManager : MonoBehaviour
         /* ・配置データ      ->  初回ログイン時 + 配置変更時   */
 
     }
-
-    void Update()
-    {
-        //if (Input.GetMouseButtonDown(0))
-        //{
-        //    Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        //    RaycastHit hit_info = new RaycastHit();
-        //    float max_distance = 100f;
-
-        //    bool is_hit = Physics.Raycast(ray, out hit_info, max_distance);
-
-        //    if (is_hit)
-        //    {
-        //        if (hit_info.transform.name == backPanel.name)
-        //        {
-        //            //TODO: ヒットした時の処理;
-        //            signUpPanel.SetActive(false);
-        //            logInPanel.SetActive(false);
-        //            soundPanel.SetActive(false);
-        //        }
-        //    }
-        //}
-    }
-
 
     // mobile backendに接続してログイン ------------------------
 

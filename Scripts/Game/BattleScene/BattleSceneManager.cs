@@ -243,6 +243,14 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
             obj.GetComponent<BattleTopCtrl>().SetIsMyTurn(false);
         }
 
+        //自分の持ち駒をすべてアクティブにする
+        List<GameObject> objList = myTopStage.GetGameObjectAll();
+
+        foreach (GameObject obj in objList)
+        {
+            obj.GetComponent<BattleTopCtrl>().SetIsMyTurn(false);
+        }
+
         /* ターン情報通知 */
         TopMoveInf inf = new TopMoveInf(source, destination, IsBring);
         float move = ConvMoveInf(inf);

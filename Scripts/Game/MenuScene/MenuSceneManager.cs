@@ -20,22 +20,27 @@ public class MenuSceneManager : MonoBehaviourPunCallbacks
     private Button PreparationButton = default;
     [SerializeField]
     private Button GachaButton = default;
+    [SerializeField]
+    private Text evtText = default;
 
     PlayerInfo playerInfo;
-
 
     void Start()
     {
         GameManager.Instance.RefPlayerInfo(ref playerInfo);
 
-        nameText.text = playerInfo.playerId.ToString();
+        //nameText.text = playerInfo.playerId.ToString();
         coinText.text = playerInfo.coins.ToString();
-        rateText.text = playerInfo.rate.ToString();
+        //rateText.text = playerInfo.rate.ToString();
 
         /* PhotonServerSettingに設定した内容を使ってマスターサーバに接続する */
         if (!PhotonNetwork.IsConnected)
         {
             PhotonNetwork.ConnectUsingSettings();
+        }
+        else
+        {
+            evtText.text = "ネットワークに接続できませんでした。";
         }
 
         //Debug.Log(NCMBUser.CurrentUser.ObjectId); //ログインユーザーのオブジェクトIDを取得する
@@ -51,6 +56,9 @@ public class MenuSceneManager : MonoBehaviourPunCallbacks
             PreparationButton.interactable = false;
             GachaButton.interactable = false;
         }
+
+        evtText.text = "まずはガチャでコマを集めよう。\r\n";
+        evtText.text += "1回100コインでガチャを回すことができるよ。";
     }
 
     // Update is called once per frame
@@ -173,6 +181,7 @@ public class MenuSceneManager : MonoBehaviourPunCallbacks
     {
         Debug.Log("ネットワークに接続しました。");
         setMyNickName(playerInfo.playerName);
+        evtText.text = "ネットワークに接続しました";
         Debug.Log("ようこそ、" + PhotonNetwork.LocalPlayer.NickName + "さん。");
     }
 
@@ -203,6 +212,9 @@ public class MenuSceneManager : MonoBehaviourPunCallbacks
         BattleButton.interactable = true;
         PreparationButton.interactable = true;
         GachaButton.interactable = true;
+
+        evtText.text = "まずはガチャでコマを集めよう。\r\n";
+        evtText.text += "1回100コインでガチャを回すことができるよ。";
     }
 
     /* ロビーから出たとき */
