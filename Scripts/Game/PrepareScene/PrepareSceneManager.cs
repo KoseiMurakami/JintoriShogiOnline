@@ -1,48 +1,43 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class PrepareSceneManager : MonoBehaviour
 {
     [SerializeField]
-    private GameObject shogiBoard;
-    
+    private GameObject shogiBoard = default; 
     [SerializeField]
     private Transform content = default;
 
-    private PossessingItems items;   /* 所持コマ情報 */
-    Dictionary<int, int> topDic = new Dictionary<int, int>();
-    private int[] topArignInfo;      /* コマ配置情報 */
-    private ShogiBoard board;        /* 将棋盤情報   */
-    private int boardSize;           /* 盤面サイズ   */
-    private Text[] topCntText;       /* 持ち駒数テキスト */
-    private GameObject[,] redCellObj; /* 赤いセル     */
-    private GameObject[,] blueCellObj; /* 赤いセル     */
-    private GameObject[,] yellowCellObj; /* 黄色いセル     */
+    Dictionary<int, int> topDic;         /* 所持コマ情報     */
+    private int[] topArignInfo;          /* コマ配置情報     */
+    private ShogiBoard board;            /* 将棋盤情報       */
+    private Text[] topCntText;           /* 持ち駒数テキスト */
+    private GameObject[,] redCellObj;    /* 赤いセル         */
+    private GameObject[,] yellowCellObj; /* 黄色いセル       */
 
     void Start()
     {
+        /* 変数初期化 */
         List<TopTable> topTableList = new List<TopTable>();
-        GameManager.Instance.RefPossessingItems(ref items);
         GameManager.Instance.RefTopTableList(ref topTableList);
-        GameObject image = Resources.Load<GameObject>("GameObjects/Image");
-        Sprite[] itemSprites = Resources.LoadAll<Sprite>("Images");
-        GameObject topCntTextObj = Resources.Load<GameObject>("UI/Text");
-        topCntText = new Text[11];//コマ種別数と一致させておく
-        boardSize = GameManager.Instance.GetShogiBoard();
+
+        /* 初期情報登録 */
+        topDic = GameManager.Instance.GetPossessingTops();
         GameManager.Instance.RefTopAlignInfo(ref topArignInfo);
-        board = new ShogiBoard(boardSize, shogiBoard.transform.position);
-        redCellObj = new GameObject[boardSize + 1, boardSize + 1];
-        yellowCellObj = new GameObject[boardSize + 1, boardSize + 1];
+        board = new ShogiBoard(GameDef.BOARD_CELLS, shogiBoard.transform.position);
+        topCntText = new Text[topTableList.Count + 1];
+        redCellObj = new GameObject[GameDef.BOARD_CELLS + 1, GameDef.BOARD_CELLS + 1];
+        yellowCellObj = new GameObject[GameDef.BOARD_CELLS + 1, GameDef.BOARD_CELLS + 1];
+
+        /* ロードリソース */
+        GameObject image = Resources.Load<GameObject>("GameObjects/Image");
+        GameObject itemPref = Resources.Load<GameObject>("GameObjects/PrepareScene/Tops/Top");
+        GameObject topCntTextObj = Resources.Load<GameObject>("UI/Text");
         GameObject redCellPref = Resources.Load<GameObject>("GameObjects/PrepareScene/RedCellObject");
         GameObject yellowCellPref = Resources.Load<GameObject>("GameObjects/PrepareScene/YellowCellObject");
 
-        GameObject itemPref = Resources.Load<GameObject>("GameObjects/PrepareScene/Tops/Top");
-
-        //所持コマ情報をもとにScrollViewにコマを格納する
-        Dictionary<int, int> tmpTopDic = items.RefTopDic();
-        topDic = tmpTopDic;
+        /* 所持コマ情報をもとにScrollViewにコマを格納する */
         foreach (TopTable top in topTableList)
         {
             //所持コマ0個の場合はimageを生成しない
@@ -55,7 +50,6 @@ public class PrepareSceneManager : MonoBehaviour
             GameObject tmp = Instantiate(image);
             Sprite itemSprite = Resources.Load<Sprite>("Images/" + top.AssetName);
             tmp.GetComponent<Image>().sprite = itemSprite;
-            //imageの親にcontentを指定する
             tmp.transform.SetParent(content);
             tmp.transform.localPosition = new Vector3(tmp.transform.position.x,
                                                       tmp.transform.position.y,
@@ -66,16 +60,14 @@ public class PrepareSceneManager : MonoBehaviour
             //textを生成する
             GameObject tmpTextObj = Instantiate(topCntTextObj);
             topCntText[top.Id] = tmpTextObj.GetComponent<Text>();
-            //textの親にimageを指定する
             tmpTextObj.transform.SetParent(tmp.transform);
             tmpTextObj.transform.localScale = new Vector3(1,1,1);
-            /* ここは後で直したい */
-            tmpTextObj.transform.localPosition = new Vector3(0, 60, 0);
+            tmpTextObj.GetComponent<RectTransform>().anchoredPosition3D = new Vector3(0, 7.6f, 0);
             topCntText[top.Id].text = "×  " + topDic[top.Id];
         }
 
-        //コマ配置情報をもとにコマを再配置する
-        for (int i = 1; i <= boardSize; i++)
+        /* コマ配置情報をもとにコマを再配置する */
+        for (int i = 1; i <= GameDef.BOARD_CELLS; i++)
         {
             if (topArignInfo[i] == 0)
             {
@@ -89,25 +81,23 @@ public class PrepareSceneManager : MonoBehaviour
             mats[0] = Resources.Load<Material>("Materials/" + topTableList.Find(topTable => topTable.Id == topArignInfo[i]).AssetName);
             top.GetComponent<MeshRenderer>().materials = mats;
 
-            Vector2 tmpVec = board.GetBoardPosByIndex(i, boardSize);
+            BoardIndex index = new BoardIndex(i, GameDef.BOARD_CELLS);
+            Vector2 tmpVec = board.GetBoardPosByIndex(index);
             top.transform.position = new Vector3(tmpVec.x, tmpVec.y, -6.85f);
             PrepareTopCtrl prepareTopCtrl = top.GetComponent<PrepareTopCtrl>();
             prepareTopCtrl.topId = topArignInfo[i];
             prepareTopCtrl.movePermitFlg = false;
-            prepareTopCtrl.xIndex = i;
-            prepareTopCtrl.yIndex = 5;
-            board.SetBoardInf(topArignInfo[i], top, i, boardSize);
-
-            //コマを配置したら持ち駒情報から減らす
-            //topDic[topArignInfo[i]]--;
-            //topCntText[topArignInfo[i]].text = "×  " + topDic[topArignInfo[i]];
+            prepareTopCtrl.SetTopIndex(index);
+            board.SetBoardInf(topArignInfo[i], top, true, index);
         }
 
-        for (int i = 1; i <= boardSize; i++)
+        /* カラーセルを配置する */
+        for (int i = 1; i <= GameDef.BOARD_CELLS; i++)
         {
-            for (int j = 1; j <= boardSize; j++)
+            for (int j = 1; j <= GameDef.BOARD_CELLS; j++)
             {
-                Vector2 tmpVal = board.GetBoardPosByIndex(i, j);
+                BoardIndex index = new BoardIndex(i, j);
+                Vector2 tmpVal = board.GetBoardPosByIndex(index);
                 Vector3 tmpVal2 = new Vector3(tmpVal.x, tmpVal.y, -6.85f);
 
                 //色付きセル(黄色、赤)を配置する
@@ -124,25 +114,32 @@ public class PrepareSceneManager : MonoBehaviour
         }
     }
 
-
-    void Update()
-    {
-        if (Input.GetMouseButtonDown(0))
-        {
-            Debug.Log(Input.mousePosition);
-        }
-    }
-
+    /// <summary>
+    /// 将棋盤情報を参照する
+    /// </summary>
+    /// <param name="board"></param>
     public void RefShogiBoard(ref ShogiBoard board)
     {
         board = this.board;
     }
 
-    public void PutATop(int topId, GameObject obj, int xIndex, int yIndex)
+    /// <summary>
+    /// 盤面にコマを置く
+    /// </summary>
+    /// <param name="topId"></param>
+    /// <param name="obj"></param>
+    /// <param name="xIndex"></param>
+    /// <param name="yIndex"></param>
+    public void PutATop(int topId, GameObject obj, BoardIndex index)
     {
-        board.SetBoardInf(topId, obj, xIndex, yIndex);
+        board.SetBoardInf(topId, obj, true, index);
     }
 
+    /// <summary>
+    /// 持ち駒情報からコマを引き出し可能かチェック
+    /// </summary>
+    /// <param name="topId"></param>
+    /// <returns></returns>
     public bool ChkPullOut(int topId)
     {
         if (topDic[topId] == 0)
@@ -155,13 +152,20 @@ public class PrepareSceneManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 持ち駒情報からコマを引き出す
+    /// </summary>
+    /// <param name="topId"></param>
     public void PullOutATop(int topId)
     {
         topDic[topId]--;
         topCntText[topId].text = "×  " + topDic[topId];
     }
 
-
+    /// <summary>
+    /// 持ち駒情報にコマをしまう
+    /// </summary>
+    /// <param name="topId"></param>
     public void EndOutATop(int topId)
     {
         topDic[topId]++;
@@ -176,9 +180,9 @@ public class PrepareSceneManager : MonoBehaviour
     public void CellHighLight(List<BoardIndex> indexies)
     {
         //盤面初期化
-        for (int i = 1; i <= boardSize; i++)
+        for (int i = 1; i <= GameDef.BOARD_CELLS; i++)
         {
-            for (int j = 1; j <= boardSize; j++)
+            for (int j = 1; j <= GameDef.BOARD_CELLS; j++)
             {
                 redCellObj[i, j].transform.position =
                     new Vector3(redCellObj[i, j].transform.position.x,
@@ -209,17 +213,11 @@ public class PrepareSceneManager : MonoBehaviour
     public void PushMenuButton()
     {
         //コマ配置情報に登録
-        for (int i = 1; i <= boardSize; i++)
+        for (int i = 1; i <= GameDef.BOARD_CELLS; i++)
         {
-            int topId = board.GetTopIdByIndex(i, boardSize);
+            BoardIndex index = new BoardIndex(i, GameDef.BOARD_CELLS);
+            int topId = board.GetTopIdByIndex(index);
             topArignInfo[i] = topId;
-
-            //減らした分つじつま合わせ
-            //5行目にしか置けないのでここだけ回収しとけばいいはず
-            if (topId != 0)
-            {
-                topDic[topArignInfo[i]]++;
-            }
         }
 
         GameManager.Instance.SetAlignInfo(topArignInfo);

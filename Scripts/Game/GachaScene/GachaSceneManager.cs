@@ -7,28 +7,23 @@ public class GachaSceneManager : MonoBehaviour
 {
     [SerializeField]
     private GameObject topSpawner = default;
-
     [SerializeField]
     private Text coinText = default;
-
     [SerializeField]
     private Text messageText = default;
 
-    PlayerInfo info;
-    GameObject topPrefab;
-    List<TopTable> topTableList;
+    PlayerInfo playerInfo;                    /* プレイヤー情報   */
+    GameObject topPrefab;                     /* コマPrefab       */
+    List<TopTable> topTableList;              /* コマ情報テーブル */
 
     void Start()
     {
-        GameManager.Instance.RefPlayerInfo(ref info);
+        GameManager.Instance.RefPlayerInfo(ref playerInfo);
         topPrefab = Resources.Load<GameObject>("GameObjects/GachaScene/Top/Top");
         GameManager.Instance.RefTopTableList(ref topTableList);
 
-        coinText.text = info.coins.ToString();
-    }
-
-    void Update()
-    {
+        coinText.text = playerInfo.coins.ToString();
+        messageText.text = "レバーを倒してコマをゲットしてね。";
     }
 
     /// <summary>
@@ -37,22 +32,76 @@ public class GachaSceneManager : MonoBehaviour
     public void DoGacha()
     {
         /* コインチェック */
-        if (info.coins < 100)
+        if (!coinCheck())
         {
-            messageText.text = "ガチャを回すことができません";
             return;
         }
 
-        Debug.Log("ガチャ抽選開始");
         /* コインを失う */
-        info.coins -= 100;
-        coinText.text = info.coins.ToString();
+        lostCoin(GameDef.GACHA_VALUE);
 
         /* ランダムに1つのコマを手に入れる */
-        int topId = Random.Range(1,10);
-        info.AddTop(topId);
-        messageText.text = topTableList.Find(table => table.Id == topId).Name + "をゲットしました！";
+        int topId = GetRandomTop();
 
+        /* コマを排出する */
+        if (topId != 0)
+        {
+            emissionTop(topId);
+        }
+    }
+
+    /// <summary>
+    /// ガチャできるだけのコインがあるかチェックする
+    /// </summary>
+    /// <returns></returns>
+    private bool coinCheck()
+    {
+        bool retVal = true;
+
+        if (playerInfo.coins < GameDef.GACHA_VALUE)
+        {
+            messageText.text = "ガチャを回すことができません";
+            retVal = false;
+        }
+
+        return retVal;
+    }
+
+    /// <summary>
+    /// コインを支払う
+    /// </summary>
+    /// <param name="price"></param>
+    private void lostCoin(int price)
+    {
+        playerInfo.coins -= price;
+        coinText.text = playerInfo.coins.ToString();
+    }
+
+    /// <summary>
+    /// ランダムなコマを1つ獲得する
+    /// </summary>
+    private int GetRandomTop()
+    {
+        int topId = Random.Range(1, 10);
+        if (playerInfo.AddTop(topId))
+        {
+            messageText.text = topTableList.Find(table => table.Id == topId).Name + "をゲットしました！";
+        }
+        else
+        {
+            topId = 0;
+            messageText.text = "同じコマを5つ以上持つことはできません。\r\n返金します。";
+            lostCoin(-GameDef.GACHA_VALUE);
+        }
+
+        return topId;
+    }
+
+    /// <summary>
+    /// コマを排出する
+    /// </summary>
+    private void emissionTop(int topId)
+    {
         /* コマを排出する */
         GameObject top = Instantiate(topPrefab, topSpawner.transform.position, Quaternion.identity);
 
@@ -60,9 +109,6 @@ public class GachaSceneManager : MonoBehaviour
         Material[] mats = top.GetComponent<MeshRenderer>().materials;
         mats[0] = Resources.Load<Material>("Materials/" + topTableList.Find(topTable => topTable.Id == topId).AssetName);
         top.GetComponent<MeshRenderer>().materials = mats;
-
-        /* ユーザー情報の更新を行う */
-        GameManager.Instance.SetPossessingItems();
     }
 
     /// <summary>

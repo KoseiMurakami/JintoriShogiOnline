@@ -13,8 +13,6 @@ public class MenuSceneManager : MonoBehaviourPunCallbacks
     [SerializeField]
     private Text coinText = default;
     [SerializeField]
-    private Text rateText = default;
-    [SerializeField]
     private Button BattleButton = default;
     [SerializeField]
     private Button PreparationButton = default;
@@ -22,54 +20,72 @@ public class MenuSceneManager : MonoBehaviourPunCallbacks
     private Button GachaButton = default;
     [SerializeField]
     private Text evtText = default;
+    [SerializeField]
+    private Text regionText = default;
+    [SerializeField]
+    private Text onlineCntText = default;
 
-    PlayerInfo playerInfo;
+    private PlayerInfo playerInfo;        /* プレイヤー情報   */
+    private List<string> textBuff;        /* テキストバッファ */
 
     void Start()
     {
-        GameManager.Instance.RefPlayerInfo(ref playerInfo);
-
-        //nameText.text = playerInfo.playerId.ToString();
-        coinText.text = playerInfo.coins.ToString();
-        //rateText.text = playerInfo.rate.ToString();
-
         /* PhotonServerSettingに設定した内容を使ってマスターサーバに接続する */
+        ConnectMasterServer();
+        GameManager.Instance.RefPlayerInfo(ref playerInfo);
+        textBuff = GetTextBuff();
+
+        //プレイヤー情報をテキストに書き込む
+        nameText.text = playerInfo.playerName;
+        coinText.text = playerInfo.coins.ToString();
+
+        //すでにロビーインしているならボタンをアクティブにする
+        if (GameManager.Instance.OnLobbyFlg)
+        {
+            SetButtonActive(true);
+        }
+        //ロビーインしていない状態であればロビーインするまで待つ
+        else
+        {
+            SetButtonActive(false);
+        }
+
+        //テキストを設定する
+        SetText();
+
+        //メニューインカウントを1つ増やす
+        GameManager.Instance.MenuInCnt++;
+    }
+
+    private void Update()
+    {
+        //リージョン
+        regionText.text = "サーバー：" + PhotonNetwork.CloudRegion;
+        //オンライン人数を取得する
+        onlineCntText.text = "オンライン人数：" + (PhotonNetwork.CountOfPlayers) + "人";
+
+        if (PhotonNetwork.CountOfPlayersInRooms % 2 == 1)
+        {
+            evtText.text = "他の誰かがマッチング相手を探しています！\r\n対局開始しましょう！";
+        }
+        else
+        {
+            if (evtText.text == "他の誰かがマッチング相手を探しています！\r\n対局開始しましょう！")
+            {
+                SetText();
+            }
+        }
+    }
+
+    /// <summary>
+    /// マスターサーバに接続する
+    /// </summary>
+    public void ConnectMasterServer()
+    {
         if (!PhotonNetwork.IsConnected)
         {
             PhotonNetwork.ConnectUsingSettings();
         }
-        else
-        {
-            evtText.text = "ネットワークに接続できませんでした。";
-        }
-
-        //Debug.Log(NCMBUser.CurrentUser.ObjectId); //ログインユーザーのオブジェクトIDを取得する
-        if (GameManager.Instance.OnLobbyFlg)
-        {
-            BattleButton.interactable = true;
-            PreparationButton.interactable = true;
-            GachaButton.interactable = true;
-        }
-        else
-        {
-            BattleButton.interactable = false;
-            PreparationButton.interactable = false;
-            GachaButton.interactable = false;
-        }
-
-        evtText.text = "まずはガチャでコマを集めよう。\r\n";
-        evtText.text += "1回100コインでガチャを回すことができるよ。";
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
-    public void PushTitleButton()
-    {
-        GameManager.Instance.LoadScene("TitleScene");
     }
 
     /// <summary>
@@ -143,17 +159,6 @@ public class MenuSceneManager : MonoBehaviourPunCallbacks
             IsOpen = true
         };
 
-        //// ルームオプションにカスタムプロパティを設定
-        //ExitGames.Client.Photon.Hashtable customRoomProperties = new ExitGames.Client.Photon.Hashtable
-        //{
-        //    { "Stage", stageName },
-        //    { "Difficulty", stageDifficulty }
-        //};
-        //roomOptions.CustomRoomProperties = customRoomProperties;
-
-        //// ロビーに公開するカスタムプロパティを指定
-        //roomOptions.CustomRoomPropertiesForLobby = new string[] { "Stage", "Difficulty" };
-
         // 部屋を作成して入室する
         if (PhotonNetwork.InLobby)
         {
@@ -173,6 +178,68 @@ public class MenuSceneManager : MonoBehaviourPunCallbacks
         }
     }
 
+    /// <summary>
+    /// ボタンのアクティブ設定を一括で行う
+    /// </summary>
+    /// <param name="activeFlg"></param>
+    public void SetButtonActive(bool activeFlg)
+    {
+        BattleButton.interactable = activeFlg;
+        PreparationButton.interactable = activeFlg;
+        GachaButton.interactable = activeFlg;
+    }
+
+    /// <summary>
+    /// テキストバッファ情報を取得する
+    /// </summary>
+    /// <returns></returns>
+    public List<string> GetTextBuff()
+    {
+        List<string> textBuff = new List<string>();
+
+        string[] strings = new string[]
+        {
+            "まずはガチャでコマを集めよう。\r\n1回100コインでガチャを回すことができるよ。",
+            "次に対局準備をしよう。\r\nここで初期配置を変更することができるよ。",
+            "準備ができたら対局だ。\r\n対局開始ボタンから相手を探そう。",
+            "「狙撃」は4マス前にジャンプできるぞ。\r\n初手で動いて先制パンチだ。",
+            "「飛車」は2マス前後に移動できるぞ。\r\n機動力を生かして有利に戦おう。",
+            "「角行」は2マス斜めに移動できるぞ。\r\n相手の意表をついて戦おう。",
+            "「香車」は2マス前に移動できるぞ。\r\n対戦序盤に低リスクで自分のマスを稼ごう。",
+            "「歩」は1マス前に移動できるぞ。\r\n正直、あえて使う必要はないぞ。",
+            "「桂馬」は2マス前、1マス左右にジャンプできるぞ。\r\n変則的な動きで相手を翻弄しよう。",
+            "「金将」は1マス後、1マス左右以外に移動できるぞ。\r\n守備を固めたいなら金将を使え。",
+            "「銀将」は左右、後以外に移動できるぞ。\r\n攻撃に特化したいなら銀将を使え。",
+            "「王将」は周り1マスに移動できるぞ。\r\nこのゲームでは王をとられてもゲームは続く。気にせず攻めろ。",
+        };
+
+        for (int i = 0; i < strings.Length; i++)
+        {
+            textBuff.Add(strings[i]);
+        }
+
+        return textBuff;
+    }
+
+    /// <summary>
+    /// テキストバッファからランダムでテキストを表示する
+    /// </summary>
+    private void SetText()
+    {
+        int menuInCnt = GameManager.Instance.MenuInCnt;
+
+        //最初の3回は決まったテキストを出す
+        if (menuInCnt == 0 || menuInCnt == 1 || menuInCnt == 2)
+        {
+            evtText.text = textBuff[menuInCnt];
+        }
+        else
+        {
+            int buffIndex = Random.Range(3, textBuff.Count);
+            evtText.text = textBuff[buffIndex];
+        }
+    }
+
     /*★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★*/
     /*★                         Pun Callback List                          ★*/
     /*★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★*/
@@ -181,7 +248,6 @@ public class MenuSceneManager : MonoBehaviourPunCallbacks
     {
         Debug.Log("ネットワークに接続しました。");
         setMyNickName(playerInfo.playerName);
-        evtText.text = "ネットワークに接続しました";
         Debug.Log("ようこそ、" + PhotonNetwork.LocalPlayer.NickName + "さん。");
     }
 
@@ -209,12 +275,7 @@ public class MenuSceneManager : MonoBehaviourPunCallbacks
         GameManager.Instance.OnLobbyFlg = true;
 
         //各ボタンをアクティブにする
-        BattleButton.interactable = true;
-        PreparationButton.interactable = true;
-        GachaButton.interactable = true;
-
-        evtText.text = "まずはガチャでコマを集めよう。\r\n";
-        evtText.text += "1回100コインでガチャを回すことができるよ。";
+        SetButtonActive(true);
     }
 
     /* ロビーから出たとき */
@@ -242,8 +303,6 @@ public class MenuSceneManager : MonoBehaviourPunCallbacks
     {
         //遷移前のシーンでネットワークオブジェクトを生成しないようにする
         PhotonNetwork.IsMessageQueueRunning = false;
-        //ルームに移動
-        //GameManager.Instance.LoadGameScene("LobbyScene");
 
         Debug.Log("部屋に入室しました。");
 
@@ -310,8 +369,6 @@ public class MenuSceneManager : MonoBehaviourPunCallbacks
     public override void OnRoomListUpdate(List<RoomInfo> roomList)
     {
         Debug.Log("ルームリストに更新がありました。");
-
-        //roomInfos = roomList;
     }
 
     /* ルームプロパティが更新されたとき */

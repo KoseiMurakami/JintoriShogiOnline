@@ -16,70 +16,50 @@ MonoBehaviour:
   - Id: 1
     Name: "\u6B69\u5175"
     AssetName: Huhei
-    MovePattern1: 0
-    MovePattern2: 0
     Page: 1
     Digit: 1
   - Id: 2
     Name: "\u6842\u99AC"
     AssetName: Keuma
-    MovePattern1: 0
-    MovePattern2: 0
     Page: 1
     Digit: 2
   - Id: 3
     Name: "\u9999\u8ECA"
     AssetName: Kyosya
-    MovePattern1: 0
-    MovePattern2: 0
     Page: 1
     Digit: 3
   - Id: 4
     Name: "\u91D1\u5C06"
     AssetName: Kin
-    MovePattern1: 0
-    MovePattern2: 0
     Page: 1
     Digit: 4
   - Id: 5
     Name: "\u9280\u5C06"
     AssetName: Gin
-    MovePattern1: 0
-    MovePattern2: 0
     Page: 1
     Digit: 5
   - Id: 6
     Name: "\u98DB\u8ECA"
     AssetName: Hisya
-    MovePattern1: 0
-    MovePattern2: 0
     Page: 2
     Digit: 1
   - Id: 7
     Name: "\u89D2\u884C"
     AssetName: Kaku
-    MovePattern1: 0
-    MovePattern2: 0
     Page: 2
     Digit: 2
   - Id: 8
     Name: "\u738B\u5C06"
     AssetName: King
-    MovePattern1: 0
-    MovePattern2: 0
     Page: 2
     Digit: 3
   - Id: 9
     Name: "\u72D9\u6483"
     AssetName: Sogeki
-    MovePattern1: 0
-    MovePattern2: 0
     Page: 2
     Digit: 4
   - Id: 10
     Name: "\u6D6A\u4EBA"
     AssetName: Ronin
-    MovePattern1: 0
-    MovePattern2: 0
     Page: 2
     Digit: 5

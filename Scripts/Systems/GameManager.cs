@@ -9,19 +9,17 @@ public class GameManager : SingletonMonoBehaviour<GameManager>
 {
     private MasterDataRepository masterDataRepository; /* マスターデータ         */
     private List<TopTable> topTableList;               /* コマ情報テーブルリスト */
-    private GameObject[] topObjects;                   /* コマPrefab             */
     private PlayerInfo playerInfo;                     /* プレイヤー情報         */
     private int BoardSize = 5;                         /* 盤面サイズ             */
     private int[] topAlignInfo;                        /* コマ配置情報           */
     public  bool OnLobbyFlg = false;                   /* ロビーインフラグ       */
+    public  int MenuInCnt = 0;                         /* メニューインカウント   */
 
     private void Start()
     {
-        topTableList = new List<TopTable>();
         masterDataRepository = Resources.Load<MasterDataRepository>("MasterData/MasterDataRepository");
         masterDataRepository.GetMstDataLoadAll(out topTableList);
-        topObjects = Resources.LoadAll<GameObject>("GameObjects/Top");
-        topAlignInfo = new int[BoardSize + 1];
+        topAlignInfo = new int[GameDef.BOARD_CELLS + 1];
     }
 
     /// <summary>
@@ -58,12 +56,18 @@ public class GameManager : SingletonMonoBehaviour<GameManager>
     }
 
     /// <summary>
-    /// 所持コマ情報を参照する
+    /// 所持コマ情報を取得する
     /// </summary>
     /// <param name="items"></param>
-    public void RefPossessingItems(ref PossessingItems items)
+    public Dictionary<int, int> GetPossessingTops()
     {
-        playerInfo.RefPossessingItems(ref items);
+        Dictionary<int, int> topDic = new Dictionary<int, int>();
+        PossessingItems items = new PossessingItems(0, 0);
+
+        items = playerInfo.GetPossessingItems();
+        topDic = items.GetTopDic();
+
+        return topDic;
     }
 
     /// <summary>
@@ -133,39 +137,5 @@ public class GameManager : SingletonMonoBehaviour<GameManager>
         //        }
         //    });
         //}
-    }
-
-    public void SetNCMBRate(int rate)
-    {
-        NCMBObject obj = new NCMBObject("Rate");
-        //obj.Add();
-    }
-
-    /// <summary>
-    /// コマ所持情報を登録する
-    /// </summary>
-    public void SetPossessingItems()
-    {
-        //float val1 = 0;
-        //float val2 = 0;
-
-        //playerInfo.RefPossessingTopInfo(ref val1, ref val2);
-
-        //NCMBUser user = new NCMBUser();
-
-
-
-        //userData["PossessingItemsPage1"] = val1;
-        //userData["PossessingItemsPage2"] = val2;
-        //userData.SaveAsync((NCMBException e) => {
-        //    if (e != null)
-        //    {
-        //        Debug.Log("コマ所持情報登録失敗");
-        //    }
-        //    else
-        //    {
-        //        Debug.Log("コマ所持情報登録完了");
-        //    }
-        //});
     }
 }

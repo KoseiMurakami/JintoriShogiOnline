@@ -46,21 +46,19 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
         }
     }
 
-    private PunTurnManager turnManager;
-    List<TopTable> topTableList = new List<TopTable>();
-    private int boardSize;                /* 盤面サイズ      */
-    private int[] alignInfo;              /* 自身の盤面情報  */
-    private int[] opponentAlignInfo;      /* 相手の盤面情報  */
-    private int myTurnIndex = 1;          /* 後攻で初期化    */
-    private GameObject[,] redCellObj;     /* 赤いセル        */
-    private GameObject[,] blueCellObj;    /* 赤いセル        */
-    private GameObject[,] yellowCellObj;  /* 黄色いセル      */
-    private GameObject[,] whiteCellObj;   /* 白いセル        */
-    private List<int> myTops;             /* 持ち駒リスト    */
-    private string OpponentName;          /* 対戦相手名      */
-    private ShogiBoard board;
-    private ShogiBoard myTopStage;
-    private ShogiBoard opponentTopStage;
+    private PunTurnManager turnManager;   /* ターンマネージャー */
+    private PlayerInfo playerInfo;        /* プレイヤー情報     */
+    List<TopTable> topTableList;          /* コマテーブルリスト */
+    private int[] alignInfo;              /* 自身の盤面情報     */
+    private int[] opponentAlignInfo;      /* 相手の盤面情報     */
+    private int myTurnIndex = 1;          /* ターンインデックス */
+    private GameObject[,] redCellObj;     /* 赤いセル           */
+    private GameObject[,] blueCellObj;    /* 赤いセル           */
+    private GameObject[,] yellowCellObj;  /* 黄色いセル         */
+    private GameObject[,] whiteCellObj;   /* 白いセル           */
+    private ShogiBoard board;             /* 盤面情報           */
+    private ShogiBoard myTopStage;        /* 自分の持ち駒情報   */
+    private ShogiBoard opponentTopStage;  /* 相手の持ち駒情報   */
 
     void Start()
     {
@@ -71,15 +69,14 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
         PhotonNetwork.IsMessageQueueRunning = true;
 
         GameManager.Instance.RefTopTableList(ref topTableList);
-        boardSize = GameManager.Instance.GetShogiBoard();
         GameManager.Instance.RefTopAlignInfo(ref alignInfo);
-        opponentAlignInfo = new int[boardSize + 1];
+        opponentAlignInfo = new int[GameDef.BOARD_CELLS + 1];
         //ボードのインスタンス化
-        board = new ShogiBoard(boardSize, new Vector2(BoardObj.transform.position.x, BoardObj.transform.position.z));
-        redCellObj = new GameObject[boardSize + 1, boardSize + 1];
-        blueCellObj = new GameObject[boardSize + 1, boardSize + 1];
-        yellowCellObj = new GameObject[boardSize + 1, boardSize + 1];
-        whiteCellObj = new GameObject[boardSize + 1, boardSize + 1];
+        board = new ShogiBoard(GameDef.BOARD_CELLS, new Vector2(BoardObj.transform.position.x, BoardObj.transform.position.z));
+        redCellObj = new GameObject[GameDef.BOARD_CELLS + 1, GameDef.BOARD_CELLS + 1];
+        blueCellObj = new GameObject[GameDef.BOARD_CELLS + 1, GameDef.BOARD_CELLS + 1];
+        yellowCellObj = new GameObject[GameDef.BOARD_CELLS + 1, GameDef.BOARD_CELLS + 1];
+        whiteCellObj = new GameObject[GameDef.BOARD_CELLS + 1, GameDef.BOARD_CELLS + 1];
         GameObject redCellPref = Resources.Load<GameObject>("GameObjects/BattleScene/RedCellObject");
         GameObject blueCellPref = Resources.Load<GameObject>("GameObjects/BattleScene/BlueCellObject");
         GameObject yellowCellPref = Resources.Load<GameObject>("GameObjects/BattleScene/YellowCellObject");
@@ -88,8 +85,7 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
         //配置情報をもとに盤面を初期化する
         //コマ配置情報をもとにコマを再配置する
         GameObject topPref = Resources.Load<GameObject>("GameObjects/BattleScene/Top");
-        //GameObject cellPref = Resources.Load<GameObject>("GameObjects/BattleScene/CellObject");
-        for (int i = 1; i <= boardSize; i++)
+        for (int i = 1; i <= GameDef.BOARD_CELLS; i++)
         {
             if (alignInfo[i] == 0)
             {
@@ -102,23 +98,23 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
             mats[0] = Resources.Load<Material>("Materials/" + topTableList.Find(topTable => topTable.Id == alignInfo[i]).AssetName);
             top.GetComponent<MeshRenderer>().materials = mats;
 
-            //GameObject cell = Instantiate(cellPref);
             BattleTopCtrl topCtrl = top.GetComponent<BattleTopCtrl>();
-            Vector2 tmpVec = board.GetBoardPosByIndex(i, boardSize);
+            BoardIndex index = new BoardIndex(i, GameDef.BOARD_CELLS);
+            Vector2 tmpVec = board.GetBoardPosByIndex(index);
             top.transform.position = new Vector3(tmpVec.x, 1, tmpVec.y);
-            //cell.transform.position = new Vector3(tmpVec.x, 1, tmpVec.y);
             topCtrl.topId = alignInfo[i];
             topCtrl.isMine = true;
             topCtrl.SetIsMine(true);
             topCtrl.SetIsMyTurn(false);
-            board.SetBoardInf(alignInfo[i], top, true, i, boardSize);
+            board.SetBoardInf(alignInfo[i], top, true, index);
         }
 
-        for (int i = 1; i <= boardSize; i++)
+        for (int i = 1; i <= GameDef.BOARD_CELLS; i++)
         {
-            for (int j = 1; j <= boardSize; j++)
+            for (int j = 1; j <= GameDef.BOARD_CELLS; j++)
             {
-                Vector2 tmpVal = board.GetBoardPosByIndex(i, j);
+                BoardIndex index = new BoardIndex(i, j);
+                Vector2 tmpVal = board.GetBoardPosByIndex(index);
                 Vector3 tmpVal2 = new Vector3(tmpVal.x, 1, tmpVal.y);
 
                 //色付きセル(黄色、赤)を配置する
@@ -170,11 +166,9 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
         }
     }
 
-    void Update()
-    {
-        
-    }
-
+    /// <summary>
+    /// 自分のターンを開始する
+    /// </summary>
     private void StartTurn()
     {
         /* 自分のコマをアクティブにする */
@@ -193,8 +187,6 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
         {
             obj.GetComponent<BattleTopCtrl>().SetIsMyTurn(true);
         }
-
-        Debug.Log("自分のターン開始");
     }
 
     /// <summary>
@@ -204,9 +196,9 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
     public void CellHighLight(List<BoardIndex> indexies)
     {
         //盤面黄色のみ初期化
-        for (int i = 1; i <= boardSize; i++)
+        for (int i = 1; i <= GameDef.BOARD_CELLS; i++)
         {
-            for (int j = 1; j <= boardSize; j++)
+            for (int j = 1; j <= GameDef.BOARD_CELLS; j++)
             {
                 yellowCellObj[i, j].transform.position =
                     new Vector3(yellowCellObj[i, j].transform.position.x,
@@ -227,7 +219,7 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
     }
 
     /// <summary>
-    /// 相手に操作情報を通知する
+    /// 自分のターンを終了する
     /// </summary>
     /// <param name="source"></param>
     /// <param name="destination"></param>
@@ -257,8 +249,6 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
         Debug.Log(move);
         //自分のターンはここで終了
         turnManager.SendMove(move, true);
-
-        Debug.Log("自分のターン終了");
     }
 
     /// <summary>
@@ -282,10 +272,10 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
 
 
         //行先にコマがあれば削除して相手の持ち駒とする
-        if (board.ChkBoardTop(distination.xIndex, distination.yIndex))
+        if (board.ChkBoardTop(distination))
         {
             GameObject obj = board.GetObjByIndex(distination);
-            board.DelBoardInf(distination.xIndex, distination.yIndex);
+            board.DelBoardInf(distination);
 
             int id = obj.GetComponent<BattleTopCtrl>().topId;
             LostATop(obj);
@@ -296,24 +286,24 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
         {
             GameObject obj = opponentTopStage.GetObjByIndex(source);
             //相手からの情報なので相手の持ち駒を削除
-            opponentTopStage.DelBoardInf(source.xIndex, source.yIndex);
+            opponentTopStage.DelBoardInf(source);
 
             int topId = obj.GetComponent<BattleTopCtrl>().topId;
-            Vector2 tmpVec = board.GetBoardPosByIndex(distination.xIndex, distination.yIndex);
+            Vector2 tmpVec = board.GetBoardPosByIndex(distination);
             obj.transform.position = new Vector3(tmpVec.x, 1, tmpVec.y);
-            board.SetBoardInf(topId, obj, false, distination.xIndex, distination.yIndex);
+            board.SetBoardInf(topId, obj, false, distination);
             PaintCell(new BoardIndex(distination.xIndex, distination.yIndex), false);
         }
         else
         {
             GameObject obj = board.GetObjByIndex(source);
 
-            board.DelBoardInf(source.xIndex, source.yIndex);
+            board.DelBoardInf(source);
 
             int topId = obj.GetComponent<BattleTopCtrl>().topId;
-            Vector2 tmpVec = board.GetBoardPosByIndex(distination.xIndex, distination.yIndex);
+            Vector2 tmpVec = board.GetBoardPosByIndex(distination);
             obj.transform.position = new Vector3(tmpVec.x, 1,tmpVec.y);
-            board.SetBoardInf(topId, obj, false, distination.xIndex, distination.yIndex);
+            board.SetBoardInf(topId, obj, false, distination);
 
             //とびがないかチェック(狙撃手はとび確認不要)
             if (topId != 9)
@@ -328,8 +318,6 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
             }
             PaintCell(new BoardIndex(distination.xIndex, distination.yIndex), false);
         }
-
-
     }
 
     /// <summary>
@@ -339,9 +327,9 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
     /// <param name="obj"></param>
     /// <param name="xIndex"></param>
     /// <param name="yIndex"></param>
-    public void PutATop(int topId, GameObject obj, int xIndex, int yIndex)
+    public void PutATop(int topId, GameObject obj, BoardIndex index)
     {
-        board.SetBoardInf(topId, obj, true, xIndex, yIndex);
+        board.SetBoardInf(topId, obj, true, index);
     }
 
     /// <summary>
@@ -356,23 +344,21 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
         {
             for (int j = 3; j >= 1; j--)
             {
+                BoardIndex index = new BoardIndex(j, i);
                 //コマがなければそこに移動
-                if (!myTopStage.ChkBoardTop(j, i))
+                if (!myTopStage.ChkBoardTop(index))
                 {
-                    myTopStage.SetBoardInf(id, obj, true, j, i);
-                    //Vector2 tmpPos = myTopStage.GetBoardPosByIndex(j, i);
-                    Vector2 tmpPos = myTopStage.GetBoardPosByIndexChild(new BoardIndex(j, i));
-
+                    myTopStage.SetBoardInf(id, obj, true, index);
+                    Vector2 tmpPos = myTopStage.GetBoardPosByIndexChild(index);
 
                     //オブジェクトを移動
                     obj.transform.position = new Vector3(tmpPos.x, 1, tmpPos.y);
                     obj.GetComponent<BattleTopCtrl>().SetIsMine(true);
-                    obj.GetComponent<BattleTopCtrl>().SetIndex(new BoardIndex(j, i));
+                    obj.GetComponent<BattleTopCtrl>().SetIndex(index);
                     return;
                 }
             }
         }
-
     }
 
     /// <summary>
@@ -388,17 +374,17 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
         {
             for (int j = 1; j <= 3; j++)
             {
+                BoardIndex index = new BoardIndex(j, i);
                 //コマがなければそこに移動
-                if (!opponentTopStage.ChkBoardTop(j, i))
+                if (!opponentTopStage.ChkBoardTop(index))
                 {
-                    opponentTopStage.SetBoardInf(id, obj, false, j, i);
-                    //Vector2 tmpPos = opponentTopStage.GetBoardPosByIndex(j, i);
-                    Vector2 tmpPos = opponentTopStage.GetBoardPosByIndexChild(new BoardIndex(j, i));
+                    opponentTopStage.SetBoardInf(id, obj, false, index);
+                    Vector2 tmpPos = opponentTopStage.GetBoardPosByIndexChild(index);
 
                     //オブジェクトを移動
                     obj.transform.position = new Vector3(tmpPos.x, 1, tmpPos.y);
                     obj.GetComponent<BattleTopCtrl>().SetIsMine(false);
-                    obj.GetComponent<BattleTopCtrl>().SetIndex(new BoardIndex(j, i));
+                    obj.GetComponent<BattleTopCtrl>().SetIndex(index);
                     return;
                 }
             }
@@ -411,10 +397,12 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
     /// <param name="index"></param>
     public void UseATop(BoardIndex index)
     {
-        myTopStage.DelBoardInf(index.xIndex, index.yIndex);
+        myTopStage.DelBoardInf(index);
     }
 
-
+    /// <summary>
+    /// ゲーム開始要求
+    /// </summary>
     public void RequireGameStart()
     {
         //マスタークライアントがターンを開始する
@@ -433,6 +421,10 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
         }
     }
 
+    /// <summary>
+    /// 将棋盤クラスを参照する
+    /// </summary>
+    /// <param name="board"></param>
     public void RefShogiBoard(ref ShogiBoard board)
     {
         board = this.board;
@@ -444,6 +436,12 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
     /// <returns></returns>
     public IEnumerator StartGameSequence()
     {
+        //マスタークライアントが部屋を締め切る
+        if (PhotonNetwork.IsMasterClient)
+        {
+            PhotonNetwork.CurrentRoom.IsOpen = false;
+        }
+
         //対戦相手表示
         PopupPanel.SetActive(true);
         popupText.GetComponent<Text>().text = "対戦準備中..";
@@ -465,7 +463,6 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
             ["AlignInfo"] = alignInfo
         };
         PhotonNetwork.LocalPlayer.SetCustomProperties(hashtable2);
-
 
         //ターン開始
         RequireGameStart();
@@ -509,6 +506,31 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
         {
             popupText.text = "あなたのまけです";
         }
+        yield return new WaitForSeconds(2);
+        popupText.text = "1000コインが追加されます";
+        GameManager.Instance.RefPlayerInfo(ref playerInfo);
+        playerInfo.coins += 1000;
+        yield return new WaitForSeconds(2);
+        popupText.text = "メニューへ戻ります";
+        yield return new WaitForSeconds(3);
+        //ルームから出る
+        PhotonNetwork.LeaveRoom();
+        //メニューシーンへ
+        GameManager.Instance.LoadScene("MenuScene");
+
+        yield break;
+    }
+
+    /// <summary>
+    /// 対局相手退出シーケンス
+    /// </summary>
+    /// <returns></returns>
+    public IEnumerator OpponentOutSequence()
+    {
+        //結果表示
+        PopupPanel.SetActive(true);
+
+        popupText.text = "相手が退室しました";
 
         yield return new WaitForSeconds(3);
         popupText.text = "メニューへ戻ります";
@@ -544,17 +566,17 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
             top.GetComponent<MeshRenderer>().materials = mats;
 
             BattleTopCtrl topCtrl = top.GetComponent<BattleTopCtrl>();
-            Vector2 tmpVec = board.GetBoardPosByIndex(6 - i, 1);
-
+            BoardIndex index = new BoardIndex((GameDef.BOARD_CELLS + 1) - i, 1);
+            Vector2 tmpVec = board.GetBoardPosByIndex(index);
             top.transform.position = new Vector3(tmpVec.x, 1, tmpVec.y);
             topCtrl.topId = alignInfo[i];
             topCtrl.SetIsMine(false);
             topCtrl.SetIsMyTurn(false);
-            board.SetBoardInf(alignInfo[i], top, false, 6 - i, 1);
+            board.SetBoardInf(alignInfo[i], top, false, index);
         }
 
         //初期位置は塗っておく
-        for (int i = 1; i <= 5; i++)
+        for (int i = 1; i <= GameDef.BOARD_CELLS; i++)
         {
             BoardIndex index = new BoardIndex(i, 1);
             PaintCell(index, false);
@@ -568,12 +590,19 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
     /// <returns></returns>
     private BoardIndex ComvOpponentIndex(BoardIndex index)
     {
-        return new BoardIndex(6 - index.xIndex, 6 - index.yIndex);
+        return new BoardIndex((GameDef.BOARD_CELLS + 1) - index.xIndex,
+                              (GameDef.BOARD_CELLS + 1) - index.yIndex);
     }
 
+    /// <summary>
+    /// 相手の持ち駒インデックスを変換する
+    /// </summary>
+    /// <param name="index"></param>
+    /// <returns></returns>
     private BoardIndex ComvOppenentIndexChild(BoardIndex index)
     {
-        return new BoardIndex(4 - index.xIndex, 4 - index.yIndex);
+        return new BoardIndex((GameDef.BOARD_CHILD_CELLS + 1) - index.xIndex,
+                              (GameDef.BOARD_CHILD_CELLS + 1) - index.yIndex);
     }
 
     /// <summary>
@@ -675,6 +704,9 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
         return new TopMoveInf(source, destination, isBring);
     }
 
+    /// <summary>
+    /// メニューボタンを押したときの処理
+    /// </summary>
     public void PushMenuButton()
     {
         //ルームから出る
@@ -682,6 +714,38 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
         //メニューシーンへ
         GameManager.Instance.LoadScene("MenuScene");
 
+    }
+
+    /// <summary>
+    /// ターンスタート可能か確認する
+    /// </summary>
+    /// <returns></returns>
+    private bool IsAbleTurnStart()
+    {
+        int indexListCnt = 0;
+
+        List<GameObject> myObjList = myTopStage.GetGameObjectAll();
+        List<BoardIndex> boardObjList = board.GetMyTopBoardIndex();
+
+        foreach (BoardIndex index in boardObjList)
+        {
+            int id = board.GetTopIdByIndex(index);
+            List<BoardIndex> indexList = board.GetMovableIndex(id, index);
+
+            foreach (BoardIndex index2 in indexList)
+            {
+                indexListCnt++;
+            }
+        }
+
+        if (myObjList.Count == 0 && indexListCnt == 0)
+        {
+            return false;
+        }
+        else
+        {
+            return true;
+        }
     }
 
     /*★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★*/
@@ -775,6 +839,7 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
     public override void OnPlayerLeftRoom(Player otherPlayer)
     {
         Debug.Log("他のプレイヤーが退室しました。");
+        StartCoroutine(OpponentOutSequence());
     }
 
     /* マスタークライアントが変わったとき */
@@ -794,8 +859,6 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
     {
         Debug.Log("ルームリストに更新がありました。");
     }
-
-
 
 
     /* フレンドリストに更新があったとき */
@@ -848,9 +911,16 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
         if (myTurnIndex == activePlayerIndex)
         {
             //自分のターン処理
-            StartTurn();
-            MyPanel.transform.Find("EventText").GetComponent<Text>().text = "あなたのターンです";
-            OpponentPanel.transform.Find("EventText").GetComponent<Text>().text = "";
+            if (IsAbleTurnStart())
+            {
+                StartTurn();
+                MyPanel.transform.Find("EventText").GetComponent<Text>().text = "あなたのターンです";
+                OpponentPanel.transform.Find("EventText").GetComponent<Text>().text = "";
+            }
+            else
+            {
+                turnManager.SendMove(0, true);
+            }
         }
         else
         {
@@ -890,9 +960,11 @@ public class BattleSceneManager : MonoBehaviourPunCallbacks, IPunTurnManagerCall
             if (player != PhotonNetwork.LocalPlayer)
             {
                 float inf = (float)move;
-                Debug.Log("データが送信されてきました");
-                TopMoveInf moveInf = ConvSetMoveInf(inf);
-                BoardUpDate(moveInf);
+                if (inf != 0)
+                {
+                    TopMoveInf moveInf = ConvSetMoveInf(inf);
+                    BoardUpDate(moveInf);
+                }
             }
         }
     }

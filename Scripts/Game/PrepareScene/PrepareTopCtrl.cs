@@ -6,18 +6,13 @@ public class PrepareTopCtrl : MonoBehaviour
 {
     private PrepareSceneManager prepareSceneManager;
     private ShogiBoard board;
-    private Vector3 pos = new Vector3();
-    private Vector2 tmpPos;
-    public int xIndex;
-    public int yIndex;
+    private BoardIndex index;
 
     public int topId;
     public bool movePermitFlg;
     private bool hideFlg;
     List<BoardIndex> indexies = new List<BoardIndex>();
     private Vector3 scale;
-    GameObject tilePrefs;
-    List<GameObject> tiles;
 
     void Start()
     {
@@ -25,7 +20,6 @@ public class PrepareTopCtrl : MonoBehaviour
         prepareSceneManager.RefShogiBoard(ref board);
         hideFlg = true;
         scale = transform.localScale;
-        tilePrefs = Resources.Load<GameObject>("GameObject/PrepareScene/CellObject");
 
         //コマ引き出し不可であれば即削除する
         if (!prepareSceneManager.ChkPullOut(topId))
@@ -36,7 +30,11 @@ public class PrepareTopCtrl : MonoBehaviour
         {
             //コマを引き出した
             prepareSceneManager.PullOutATop(topId);
+            //自身のオブジェクトから盤面インデックスを把握しておく
+            Vector3 pos = gameObject.transform.position;
+            board.GetIndexByPos(new Vector2(pos.x, pos.y), ref index);
         }
+
     }
 
     void Update()
@@ -48,21 +46,18 @@ public class PrepareTopCtrl : MonoBehaviour
             RaycastHit hit;
             if (Physics.Raycast(ray, out hit, Mathf.Infinity))
             {
-                //if (hit.collider.gameObject.CompareTag("Top"))
                 if (hit.transform.gameObject == this.gameObject)
                 {
                     movePermitFlg = true;
-                    board.DelBoardInf(xIndex, yIndex);
-                    Debug.Log("消える");
+                    board.DelBoardInf(index);
 
-                    indexies = board.GetMovableIndex(topId, xIndex, yIndex);
+                    indexies = board.GetMovableIndex(topId, index);
 
                     prepareSceneManager.CellHighLight(indexies);
                     foreach (BoardIndex index in indexies)
                     {
-                        Vector2 tmpVal = board.GetBoardPosByIndex(index.xIndex, index.yIndex);
+                        Vector2 tmpVal = board.GetBoardPosByIndex(index);
                         Vector3 tmpVal2 = new Vector3(tmpVal.x, tmpVal.y, -6.85f);
-                        Debug.Log(index.xIndex + ", " + index.yIndex);
                     }
                 }
             }
@@ -72,25 +67,25 @@ public class PrepareTopCtrl : MonoBehaviour
         {
             if (movePermitFlg)
             {
-                tmpPos = Input.mousePosition;
-                this.pos = Camera.main.WorldToScreenPoint(transform.position);
+                Vector2 tmpPos = Input.mousePosition;
+                Vector3 pos = Camera.main.WorldToScreenPoint(transform.position);
                 Vector3 a = new Vector3(tmpPos.x, tmpPos.y, pos.z);
-                this.pos = Camera.main.ScreenToWorldPoint(a);
-                tmpPos = board.GetCellPosByPos(this.pos, ref xIndex, ref yIndex);
+                pos = Camera.main.ScreenToWorldPoint(a);
+                tmpPos = board.GetCellPosByPos(pos, ref index);
                 transform.position = new Vector3(tmpPos.x, tmpPos.y, pos.z);
 
 
-                indexies = board.GetMovableIndex(topId, xIndex, yIndex);
+                indexies = board.GetMovableIndex(topId, index);
                 prepareSceneManager.CellHighLight(indexies);
 
                 //持っている間少しでかくする
                 transform.localScale = 1.2f * scale;
 
-                //位置が下すぎる場合は非表示にしておく
-                if (this.pos.y < 0.58f)
+                //位置が下すぎる場合はホバーする
+                if (pos.y < 0.58f)
                 {
                     hideFlg = true;
-                    transform.position = this.pos;
+                    transform.position = pos;
                 }
                 else
                 {
@@ -118,7 +113,7 @@ public class PrepareTopCtrl : MonoBehaviour
                     Destroy(gameObject);
                 }
                 //ドロップ位置が5行目ではない場合は削除する
-                else if (yIndex != 5)
+                else if (index.yIndex != 5)
                 {
                     //コマをしまった
                     prepareSceneManager.EndOutATop(topId);
@@ -126,26 +121,31 @@ public class PrepareTopCtrl : MonoBehaviour
                     Destroy(gameObject);
                 }
                 //ドロップ位置にコマがない場合、盤面情報に登録する
-                else if (!board.ChkBoardTop(xIndex, yIndex))
+                else if (!board.ChkBoardTop(index))
                 {
-                    prepareSceneManager.PutATop(topId, gameObject, xIndex, yIndex);
+                    prepareSceneManager.PutATop(topId, gameObject, index);
                 }
                 //コマがある場合はそのコマを削除し、上書きする
                 else
                 {
-                    int delId = board.GetTopIdByIndex(xIndex, yIndex);
+                    int delId = board.GetTopIdByIndex(index);
 
                     //コマをしまった
                     prepareSceneManager.EndOutATop(delId);
 
-                    GameObject obj = board.DelBoardInf(xIndex, yIndex);
+                    GameObject obj = board.DelBoardInf(index);
 
                     Destroy(obj);
-                    prepareSceneManager.PutATop(topId, gameObject, xIndex, yIndex);
+                    prepareSceneManager.PutATop(topId, gameObject, index);
                 }
 
                 movePermitFlg =false;
             }
         }
+    }
+
+    public void SetTopIndex(BoardIndex index)
+    {
+        this.index = index;
     }
 }

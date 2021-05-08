@@ -2,6 +2,15 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// ゲームデータ定義
+/// </summary>
+static class GameDef
+{
+    public const int BOARD_CELLS = 5;
+    public const int BOARD_CHILD_CELLS = 3;
+    public const int GACHA_VALUE = 100;
+}
 public class PlayerInfo
 {
     public int playerId;
@@ -12,6 +21,15 @@ public class PlayerInfo
     private float alignInfo;
     private List<TopTable> topTableList;
 
+    /// <summary>
+    /// クラスインスタンス化
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="name"></param>
+    /// <param name="rate"></param>
+    /// <param name="coins"></param>
+    /// <param name="items"></param>
+    /// <param name="alignInfo"></param>
     public PlayerInfo(int id, string name, int rate, int coins, PossessingItems items, float alignInfo)
     {
         this.playerId = id;
@@ -24,18 +42,22 @@ public class PlayerInfo
         GameManager.Instance.RefTopTableList(ref topTableList);
     }
 
-    public void RefPossessingItems(ref PossessingItems items)
+    /// <summary>
+    /// 所持アイテムを取得する
+    /// </summary>
+    /// <returns></returns>
+    public PossessingItems GetPossessingItems()
     {
-        items = this.items;
+        return this.items;
     }
 
     /// <summary>
     /// 指定したコマを持ち物に加える
     /// </summary>
     /// <param name="id"></param>
-    public void AddTop(int id)
+    public bool AddTop(int id)
     {
-        items.GetTop(id);
+        return items.GetTop(id);
     }
 
     /// <summary>
@@ -100,8 +122,6 @@ public class PlayerInfo
 
         return retVal;
     }
-
-
 }
 
 public class ShogiBoard
@@ -121,18 +141,6 @@ public class ShogiBoard
             this.obj = null;
         }
     }
-
-    //public class BoardIndex
-    //{
-    //    public int xIndex;
-    //    public int yIndex;
-
-    //    public BoardIndex(int x, int y)
-    //    {
-    //        xIndex = x;
-    //        yIndex = y;
-    //    }
-    //}
 
     private int boardSize;                                   /* 盤面サイズ   */
     private BoardInf[,] boardInf;                            /* 盤面情報     */
@@ -212,16 +220,6 @@ public class ShogiBoard
     }
 
     /// <summary>
-    /// 指定インデックスの自コマ情報を書き換える
-    /// </summary>
-    /// <param name="val"></param>
-    /// <param name="index"></param>
-    public void SetIsMine(bool val, BoardIndex index)
-    {
-        boardInf[index.xIndex, index.yIndex].isMine = val;
-    }
-
-    /// <summary>
     /// 指定インデックスのオブジェクトを取得する
     /// </summary>
     /// <param name="index"></param>
@@ -237,15 +235,15 @@ public class ShogiBoard
     /// <param name="xIndex"></param>
     /// <param name="yIndex"></param>
     /// <returns></returns>
-    public Vector2 GetBoardPosByIndex(int xIndex, int yIndex)
+    public Vector2 GetBoardPosByIndex(BoardIndex index)
     {
         Vector2 cellPos = new Vector2(0, 0);
 
         //将棋盤の右上を原点にする
         cellPos = boardPos + new Vector2(1.0f, 1.0f);
 
-        cellPos = new Vector2(cellPos.x - (float)(2 * xIndex - 1) / (boardSize),
-                              cellPos.y - (float)(2 * yIndex - 1) / (boardSize));
+        cellPos = new Vector2(cellPos.x - (float)(2 * index.xIndex - 1) / (boardSize),
+                              cellPos.y - (float)(2 * index.yIndex - 1) / (boardSize));
 
         return cellPos;
     }
@@ -267,27 +265,9 @@ public class ShogiBoard
     /// 将棋盤インデックスからコマIDを出力する
     /// </summary>
     /// <returns></returns>
-    public int GetTopIdByIndex(int xIndex, int yIndex)
+    public int GetTopIdByIndex(BoardIndex index)
     {
-        return boardInf[xIndex, yIndex].topId;
-    }
-
-    /// <summary>
-    /// 将棋盤にコマ情報を登録する
-    /// </summary>
-    /// <param name="xIndex"></param>
-    /// <param name="yIndex"></param>
-    public void SetBoardInf(int topId, GameObject obj, int xIndex, int yIndex)
-    {
-        if (xIndex > boardSize || yIndex > boardSize)
-        {
-            Debug.LogError("GetBoardPosByIndex : 盤面サイズ以上の値が入力されました。");
-            Debug.LogError(boardSize+ " -> " + xIndex + ", " + yIndex);
-            return;
-        }
-
-        boardInf[xIndex, yIndex].topId = topId;
-        boardInf[xIndex, yIndex].obj = obj;
+        return boardInf[index.xIndex, index.yIndex].topId;
     }
 
     /// <summary>
@@ -298,18 +278,18 @@ public class ShogiBoard
     /// <param name="isMine"></param>
     /// <param name="xIndex"></param>
     /// <param name="yIndex"></param>
-    public void SetBoardInf(int topId, GameObject obj, bool isMine, int xIndex, int yIndex)
+    public void SetBoardInf(int topId, GameObject obj, bool isMine, BoardIndex index)
     {
-        if (xIndex > boardSize || yIndex > boardSize)
+        if (index.xIndex > boardSize || index.yIndex > boardSize)
         {
             Debug.LogError("GetBoardPosByIndex : 盤面サイズ以上の値が入力されました。");
-            Debug.LogError(boardSize + " -> " + xIndex + ", " + yIndex);
+            Debug.LogError(boardSize + " -> " + index.xIndex + ", " + index.yIndex);
             return;
         }
 
-        boardInf[xIndex, yIndex].topId = topId;
-        boardInf[xIndex, yIndex].obj = obj;
-        boardInf[xIndex, yIndex].isMine = isMine;
+        boardInf[index.xIndex, index.yIndex].topId = topId;
+        boardInf[index.xIndex, index.yIndex].obj = obj;
+        boardInf[index.xIndex, index.yIndex].isMine = isMine;
     }
 
     /// <summary>
@@ -317,22 +297,20 @@ public class ShogiBoard
     /// </summary>
     /// <param name="xIndex"></param>
     /// <param name="yIndex"></param>
-    public GameObject DelBoardInf(int xIndex, int yIndex)
+    public GameObject DelBoardInf(BoardIndex index)
     {
-        if (xIndex > boardSize || yIndex > boardSize)
+        if (index.xIndex > boardSize || index.yIndex > boardSize)
         {
             Debug.LogError("DelBoardInf : 盤面サイズ以上の値が入力されました。");
-            Debug.LogError(boardSize + " -> " + xIndex + ", " + yIndex);
+            Debug.LogError(boardSize + " -> " + index.xIndex + ", " + index.yIndex);
             return null;
         }
 
-        GameObject obj = boardInf[xIndex, yIndex].obj;
+        GameObject obj = boardInf[index.xIndex, index.yIndex].obj;
 
-        boardInf[xIndex, yIndex].topId = 0;
-        boardInf[xIndex, yIndex].obj = null;
-        boardInf[xIndex, yIndex].isMine = false;
-
-        Debug.Log("盤面情報削除");
+        boardInf[index.xIndex, index.yIndex].topId = 0;
+        boardInf[index.xIndex, index.yIndex].obj = null;
+        boardInf[index.xIndex, index.yIndex].isMine = false;
 
         return obj;
     }
@@ -342,44 +320,37 @@ public class ShogiBoard
     /// </summary>
     /// <param name="vec"></param>
     /// <returns></returns>
-    public Vector2 GetCellPosByPos(Vector2 vec, ref int xIndex, ref int yIndex)
+    public Vector2 GetCellPosByPos(Vector2 vec, ref BoardIndex index)
     {
+        index = new BoardIndex(0, 0);
         float tmpVal = 0;
 
         for (int i = 1; i <= boardSize; i++)
         {
             if (i != 1 &&
-                tmpVal < Mathf.Abs(vec.x - GetBoardPosByIndex(i, 1).x))
+                tmpVal < Mathf.Abs(vec.x - GetBoardPosByIndex(new BoardIndex(i, 1)).x))
             {
                 break;
             }
 
-            xIndex = i;
-            tmpVal = Mathf.Abs(vec.x - GetBoardPosByIndex(i, 1).x);
+            index.xIndex = i;
+            tmpVal = Mathf.Abs(vec.x - GetBoardPosByIndex(new BoardIndex(i, 1)).x);
         }
 
         tmpVal = 0;
         for (int i = 1; i <= boardSize; i++)
         {
             if (i != 1 &&
-                tmpVal < Mathf.Abs(vec.y - GetBoardPosByIndex(1, i).y))
+                tmpVal < Mathf.Abs(vec.y - GetBoardPosByIndex(new BoardIndex(1, i)).y))
             {
                 break;
             }
 
-            yIndex = i;
-            tmpVal = Mathf.Abs(vec.y - GetBoardPosByIndex(1, i).y);
+            index.yIndex = i;
+            tmpVal = Mathf.Abs(vec.y - GetBoardPosByIndex(new BoardIndex(1, i)).y);
         }
 
-        //算出された盤面上にコマがある場合は入力ベクトルを返す
-        //if (boardInf[xIndex, yIndex] != 0)
-        //{
-        //    xIndex = 0;
-        //    yIndex = 0;
-        //    return vec;
-        //}
-
-        return GetBoardPosByIndex(xIndex, yIndex);
+        return GetBoardPosByIndex(index);
     }
 
     /// <summary>
@@ -388,42 +359,38 @@ public class ShogiBoard
     /// <param name="vec"></param>
     /// <param name="x"></param>
     /// <param name="y"></param>
-    public bool GetIndexByPos(Vector2 vec, ref int x, ref int y)
+    public bool GetIndexByPos(Vector2 vec, ref BoardIndex index)
     {
-        int xIndex = 0;
-        int yIndex = 0;
+        index = new BoardIndex(0, 0);
         float tmpVal = 0;
 
         for (int i = 1; i <= boardSize; i++)
         {
             if (i != 1 &&
-                tmpVal < Mathf.Abs(vec.x - GetBoardPosByIndex(i, 1).x))
+                tmpVal < Mathf.Abs(vec.x - GetBoardPosByIndex(new BoardIndex(i, 1)).x))
             {
                 break;
             }
 
-            xIndex = i;
-            tmpVal = Mathf.Abs(vec.x - GetBoardPosByIndex(i, 1).x);
+            index.xIndex = i;
+            tmpVal = Mathf.Abs(vec.x - GetBoardPosByIndex(new BoardIndex(i, 1)).x);
         }
 
         tmpVal = 0;
         for (int i = 1; i <= boardSize; i++)
         {
             if (i != 1 &&
-                tmpVal < Mathf.Abs(vec.y - GetBoardPosByIndex(1, i).y))
+                tmpVal < Mathf.Abs(vec.y - GetBoardPosByIndex(new BoardIndex(1, i)).y))
             {
                 break;
             }
 
-            yIndex = i;
-            tmpVal = Mathf.Abs(vec.y - GetBoardPosByIndex(1, i).y);
+            index.yIndex = i;
+            tmpVal = Mathf.Abs(vec.y - GetBoardPosByIndex(new BoardIndex(1, i)).y);
         }
 
-        x = xIndex;
-        y = yIndex;
-
         //算出された盤面上にコマがある場合はfalseを返す
-        if (boardInf[xIndex, yIndex].topId != 0)
+        if (boardInf[index.xIndex, index.yIndex].topId != 0)
         {
             return false;
         }
@@ -437,16 +404,16 @@ public class ShogiBoard
     /// <param name="xIndex"></param>
     /// <param name="yIndex"></param>
     /// <returns></returns>
-    public bool ChkBoardTop(int xIndex, int yIndex)
+    public bool ChkBoardTop(BoardIndex index)
     {
         /* 禁止入力 */
-        if (xIndex == 0 || yIndex == 0)
+        if (index.xIndex == 0 || index.yIndex == 0)
         {
             return false;
         }
 
         //指定位置にコマはない
-        if (boardInf[xIndex, yIndex].topId == 0)
+        if (boardInf[index.xIndex, index.yIndex].topId == 0)
         {
             return false;
         }
@@ -464,10 +431,10 @@ public class ShogiBoard
     /// <param name="x"></param>
     /// <param name="y"></param>
     /// <returns></returns>
-    public List<BoardIndex> GetMovableIndex(int id, int x, int y)
+    public List<BoardIndex> GetMovableIndex(int id, BoardIndex inputIndex)
     {
         List<BoardIndex> indexList = new List<BoardIndex>();
-        BoardIndex originIndex = new BoardIndex(x, y);
+        BoardIndex originIndex = new BoardIndex(inputIndex.xIndex, inputIndex.yIndex);
 
         //浪人の場合はそのまま渡す
         if (id == 10)
@@ -477,7 +444,7 @@ public class ShogiBoard
 
         foreach (BoardIndex tmpIndex in topMovableDic[id])
         {
-            BoardIndex index = new BoardIndex(tmpIndex.xIndex + x, tmpIndex.yIndex + y);
+            BoardIndex index = new BoardIndex(tmpIndex.xIndex + inputIndex.xIndex, tmpIndex.yIndex + inputIndex.yIndex);
 
             //範囲外であれば移動不可
             if (index.xIndex > boardSize ||
@@ -492,7 +459,6 @@ public class ShogiBoard
             if (boardInf[index.xIndex, index.yIndex].topId != 0 &&
                 boardInf[index.xIndex, index.yIndex].isMine == true)
             {
-                Debug.Log("[" + index.xIndex + index.yIndex + index.xIndex + index.yIndex + "]");
                 continue;
             }
 
@@ -672,14 +638,14 @@ public class ShogiBoard
     /// 浪人の移動定義を変更する
     /// </summary>
     /// <param name="index"></param>
-    public void SetRoninMovableIndexDef(BoardIndex index)
+    public void SetRoninMovableIndexDef()
     {
         for (int i = 0; i < 3; i++)
         {
-            int xIndex = Random.Range(1,6);
-            int yIndex = Random.Range(1,6);
+            int xIndex = Random.Range(1, GameDef.BOARD_CELLS + 1);
+            int yIndex = Random.Range(1, GameDef.BOARD_CELLS + 1);
             topMovableDic[10][i].xIndex = xIndex;
-            topMovableDic[10][i].xIndex = yIndex;
+            topMovableDic[10][i].yIndex = yIndex;
         }
     }
 
@@ -1006,13 +972,13 @@ public class PossessingItems
     List<TopTable> topTableList;
     Dictionary<int, int> topDic = new Dictionary<int, int>(); /* 所持しているコマのid, 個数 */
 
-    public PossessingItems(float val1, float val2)
+    public PossessingItems(float page1Val, float page2Val)
     {
         topTableList = new List<TopTable>();
         GameManager.Instance.RefTopTableList(ref topTableList);
         
-        possessingItemsVal1 = val1;
-        possessingItemsVal2 = val2;
+        possessingItemsVal1 = page1Val;
+        possessingItemsVal2 = page2Val;
 
         foreach(TopTable top in topTableList)
         {
@@ -1021,14 +987,14 @@ public class PossessingItems
             switch (top.Page)
             {
                 case 1:
-                    divis = (int)(val1 % 0x10);
-                    val1 -= divis;
-                    val1 /= 0x10;
+                    divis = (int)(page1Val % 0x10);
+                    page1Val -= divis;
+                    page1Val /= 0x10;
                     break;
                 case 2:
-                    divis = (int)(val2 % 0x10);
-                    val2 -= divis;
-                    val2 /= 0x10;
+                    divis = (int)(page2Val % 0x10);
+                    page2Val -= divis;
+                    page2Val /= 0x10;
                     break;
                 default:
                     break;
@@ -1041,11 +1007,16 @@ public class PossessingItems
     /// <summary>
     /// 所持コマリストを出力する
     /// </summary>
-    public Dictionary<int, int> RefTopDic()
+    public Dictionary<int, int> GetTopDic()
     {
-        Dictionary<int, int> tmpDic = new Dictionary<int, int>();
-        tmpDic = this.topDic;
-        return tmpDic;
+        Dictionary<int, int> retDic = new Dictionary<int, int>();
+
+        foreach (TopTable top in topTableList)
+        {
+            retDic[top.Id] = this.topDic[top.Id];
+        }
+
+        return retDic;
     }
 
     /// <summary>
@@ -1063,21 +1034,22 @@ public class PossessingItems
     /// 指定されたコマの所持数を1増やす
     /// </summary>
     /// <param name="topId"></param>
-    public void GetTop(int topId)
+    public bool GetTop(int topId)
     {
         TopTable topTable = topTableList.Find(top => top.Id == topId);
 
         /* コマは5つ以上持てないようにする */
         if (topDic[topId] >= 5)
         {
-            Debug.Log("5つ以上保持しています");
-            return;
+            return false;
         }
 
         //float値を登録
         SetPossessingItemsIntVal(topTable.Page, topTable.Digit);
         //リスト値を登録
         topDic[topId]++;
+
+        return true;
     }
 
     /// <summary>
@@ -1103,12 +1075,3 @@ public class PossessingItems
     }
 }
 
-
-public enum MovePattern
-{
-    PATTERN_01,
-    PATTERN_02,
-    PATTERN_03,
-    PATTERN_04,
-    PATTERN_05
-}

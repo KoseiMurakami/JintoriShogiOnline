@@ -6,15 +6,11 @@ public class BattleTopCtrl : MonoBehaviour
 {
     private BattleSceneManager battleSceneManager;
     private ShogiBoard board;
-    private Vector3 pos = new Vector3();
+    private Vector3 pos;
     private Vector2 tmpPos;
-    private Vector2 tmpPos2;
     private Vector3 inputPos;
-    private Vector3 movePos;
-    private int xIndex;
-    private int yIndex;
-    private int befIndexX;
-    private int befIndexY;
+    private BoardIndex index;
+    private BoardIndex befIndex;
 
     public bool movePermitFlg;
     private bool reverseFlg;
@@ -33,10 +29,11 @@ public class BattleTopCtrl : MonoBehaviour
         movePermitFlg = false;
         reverseFlg = false;
         scale = transform.localScale;
+        index = new BoardIndex(0, 0);
 
         //自身のオブジェクトから盤面インデックスを把握しておく
         pos = gameObject.transform.position;
-        board.GetIndexByPos(new Vector2(pos.x, pos.z), ref xIndex, ref yIndex);
+        board.GetIndexByPos(new Vector2(pos.x, pos.z), ref index);
     }
 
     // Update is called once per frame
@@ -57,43 +54,26 @@ public class BattleTopCtrl : MonoBehaviour
             {
                 if (hit.transform.gameObject == this.gameObject)
                 {
+                    movePermitFlg = true;
+                    befIndex = index;
                     if (isBring)
                     {
-                        movePermitFlg = true;
-                        befIndexX = xIndex;
-                        befIndexY = yIndex;
-                        battleSceneManager.UseATop(new BoardIndex(xIndex, yIndex));
+                        battleSceneManager.UseATop(index);
 
-                        //空のインデックスをハイライトする
+                        //空のインデックスをすべて取得する
                         indexies = board.GetEmptyBoardIndex();
-
-                        battleSceneManager.CellHighLight(indexies);
-                        foreach (BoardIndex index in indexies)
-                        {
-                            Vector2 tmpVal = board.GetBoardPosByIndex(index.xIndex, index.yIndex);
-                            Vector3 tmpVal2 = new Vector3(tmpVal.x, tmpVal.y, -6.85f);
-                            Debug.Log(index.xIndex + ", " + index.yIndex);
-                        }
                     }
                     //盤面上のコマを動かしたとき
                     else
                     {
-                        movePermitFlg = true;
-                        befIndexX = xIndex;
-                        befIndexY = yIndex;
-                        board.DelBoardInf(xIndex, yIndex);
+                        board.DelBoardInf(index);
 
-                        //可動範囲をハイライトする
-                        indexies = board.GetMovableIndex(topId, xIndex, yIndex);
-
-                        battleSceneManager.CellHighLight(indexies);
-                        foreach (BoardIndex index in indexies)
-                        {
-                            Vector2 tmpVal = board.GetBoardPosByIndex(index.xIndex, index.yIndex);
-                            Vector3 tmpVal2 = new Vector3(tmpVal.x, tmpVal.y, -6.85f);
-                            Debug.Log(index.xIndex + ", " + index.yIndex);
-                        }
+                        //可動インデックスをすべて取得する
+                        indexies = board.GetMovableIndex(topId, index);
                     }
+
+                    //取得したインデックスをすべてハイライトする
+                    battleSceneManager.CellHighLight(indexies);
                 }
             }
         }
@@ -106,10 +86,8 @@ public class BattleTopCtrl : MonoBehaviour
                 this.pos = Camera.main.WorldToScreenPoint(transform.position);
                 Vector3 a = new Vector3(inputPos.x, inputPos.y, pos.z);
                 this.pos = Camera.main.ScreenToWorldPoint(a);
-                tmpPos = board.GetCellPosByPos(new Vector2(this.pos.x, this.pos.z), ref xIndex, ref yIndex);
+                tmpPos = board.GetCellPosByPos(new Vector2(this.pos.x, this.pos.z), ref index);
                 transform.position = new Vector3(tmpPos.x, 1, tmpPos.y);
-
-                BoardIndex tmpIndex = new BoardIndex(xIndex, yIndex);
 
                 //持っている間少しでかくする
                 transform.localScale = 1.2f * scale;
@@ -122,17 +100,14 @@ public class BattleTopCtrl : MonoBehaviour
                 {
                     reverseFlg = true;
                     transform.position = this.pos;
-                    Debug.Log("1");
                 }
-                else if (!ChkIsMovableIndex(tmpIndex))
+                else if (!ChkIsMovableIndex(index))
                 {
                     reverseFlg = true;
                     transform.position = this.pos;
-                    Debug.Log("2");
                 }
                 else
                 {
-                    Debug.Log("3");
                     reverseFlg = false;
                 }
             }
@@ -151,48 +126,40 @@ public class BattleTopCtrl : MonoBehaviour
                 //リバース状態のときは元の位置に戻す
                 if (reverseFlg)
                 {
+                    index = befIndex;
                     //コマ置き場→盤面
                     if (isBring)
                     {
-                        Debug.Log("元の位置に戻す");
-                        xIndex = befIndexX;
-                        yIndex = befIndexY;
                         battleSceneManager.GetATop(gameObject);
                     }
                     //盤面→盤面
                     else
                     {
-                        Debug.Log("元の位置に戻す");
-                        xIndex = befIndexX;
-                        yIndex = befIndexY;
-                        battleSceneManager.PutATop(topId, gameObject, befIndexX, befIndexY);
-                        Vector2 tmpVec = board.GetBoardPosByIndex(befIndexX, befIndexY);
+                        battleSceneManager.PutATop(topId, gameObject, befIndex);
+                        Vector2 tmpVec = board.GetBoardPosByIndex(befIndex);
                         gameObject.transform.position = new Vector3(tmpVec.x, gameObject.transform.position.y, tmpVec.y);
                     }
                 }
                 //ドロップ位置にコマがない場合、盤面情報に登録する
-                else if (!board.ChkBoardTop(xIndex, yIndex))
+                else if (!board.ChkBoardTop(index))
                 {
-                    Debug.Log("保存しました");
-                    battleSceneManager.PutATop(topId, gameObject, xIndex, yIndex);
+                    battleSceneManager.PutATop(topId, gameObject, index);
 
                     //ターンエンド手続き
-                    BoardIndex source = new BoardIndex(befIndexX, befIndexY);
-                    BoardIndex destination = new BoardIndex(xIndex, yIndex);
-                    battleSceneManager.TurnEnd(source, destination, isBring);
+                    battleSceneManager.TurnEnd(befIndex, index, isBring);
 
                     //とびがないかチェック(狙撃手はとび確認不要)
                     if (topId != 9)
                     {
                         List<BoardIndex> indexList =
-                            board.GetCellIndexBitweenCells(source, destination);
+                            board.GetCellIndexBitweenCells(befIndex, index);
 
                         foreach (BoardIndex index in indexList)
                         {
                             battleSceneManager.PaintCell(index, true);
                         }
                     }
-                    battleSceneManager.PaintCell(destination, true);
+                    battleSceneManager.PaintCell(index, true);
 
                     //持ち駒を置くことができるのはここのパスのみ
                     if (isBring)
@@ -203,28 +170,25 @@ public class BattleTopCtrl : MonoBehaviour
                 //コマがある場合はそのコマを削除し、上書きする
                 else
                 {
-                    Debug.Log("コマをとりました");
-                    GameObject obj = board.DelBoardInf(xIndex, yIndex);
+                    GameObject obj = board.DelBoardInf(index);
                     battleSceneManager.GetATop(obj);
-                    battleSceneManager.PutATop(topId, gameObject, xIndex, yIndex);
+                    battleSceneManager.PutATop(topId, gameObject, index);
 
                     //ターンエンド手続き
-                    BoardIndex source = new BoardIndex(befIndexX, befIndexY);
-                    BoardIndex destination = new BoardIndex(xIndex, yIndex);
-                    battleSceneManager.TurnEnd(source, destination, false);
+                    battleSceneManager.TurnEnd(befIndex, index, false);
 
                     //とびがないかチェック(狙撃手はとび確認不要)
                     if (topId != 9)
                     {
                         List<BoardIndex> indexList =
-                            board.GetCellIndexBitweenCells(source, destination);
+                            board.GetCellIndexBitweenCells(befIndex, index);
 
                         foreach (BoardIndex index in indexList)
                         {
                             battleSceneManager.PaintCell(index, true);
                         }
                     }
-                    battleSceneManager.PaintCell(destination, true);
+                    battleSceneManager.PaintCell(index, true);
                 }
 
                 movePermitFlg = false;
@@ -284,7 +248,6 @@ public class BattleTopCtrl : MonoBehaviour
     /// <param name="index"></param>
     public void SetIndex(BoardIndex index)
     {
-        xIndex = index.xIndex;
-        yIndex = index.yIndex;
+        this.index = index;
     }
 }
